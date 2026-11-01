@@ -4,6 +4,8 @@ A small, self-contained example of JWT authentication in [NestJS](https://nestjs
 
 It shows the common **access token + refresh token** pattern: a short-lived access token returned in the response body, and a long-lived refresh token stored in an `httpOnly` cookie.
 
+**[API documentation](https://oppositeart.github.io/nestjs-simple-auth/)**
+
 ## Features
 
 - Register, login, refresh, logout and "current user" endpoints
@@ -138,6 +140,8 @@ The API runs on [http://localhost:3000](http://localhost:3000) (set `PORT` to ch
 
 To try the protected endpoint in Swagger, call `/auth/login`, copy the `accessToken`, click **Authorize** and paste it.
 
+The same spec is published as read-only [API documentation](https://oppositeart.github.io/nestjs-simple-auth/) on GitHub Pages. It's built from [`docs/openapi.json`](docs/openapi.json); after changing endpoints or DTOs, run `npm run docs:export` and commit the updated file.
+
 ### Examples with Postman
 
 The repo includes a ready-to-use Postman collection: [`postman/nestjs-simple-auth.postman_collection.json`](postman/nestjs-simple-auth.postman_collection.json).
@@ -249,19 +253,24 @@ src/
 └── main.ts
 prisma/
 └── schema.prisma      # User model
+docs/                  # GitHub Pages API docs (Redoc + openapi.json)
+postman/               # Postman collection
+scripts/
+└── export-openapi.js  # Writes docs/openapi.json
 ```
 
 The Prisma client is generated into `src/generated/prisma` and is not committed.
 
 ## Scripts
 
-| Command              | Description          |
-| -------------------- | -------------------- |
-| `npm run start:dev`  | Start in watch mode  |
-| `npm run build`      | Compile to `dist/`   |
-| `npm run start:prod` | Run the compiled app |
-| `npm run lint`       | Lint with oxlint     |
-| `npm run format`     | Format with Prettier |
+| Command               | Description                                                     |
+| --------------------- | --------------------------------------------------------------- |
+| `npm run start:dev`   | Start in watch mode                                             |
+| `npm run build`       | Compile to `dist/`                                              |
+| `npm run start:prod`  | Run the compiled app                                            |
+| `npm run lint`        | Lint with oxlint                                                |
+| `npm run format`      | Format with Prettier                                            |
+| `npm run docs:export` | Build the app and write the OpenAPI spec to `docs/openapi.json` |
 
 ## Limitations
 

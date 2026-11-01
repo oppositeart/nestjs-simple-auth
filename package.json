@@ -10,6 +10,7 @@
     "postinstall": "prisma generate",
     "build": "nest build",
     "deploy": "nest deploy",
+    "docs:export": "nest build && node scripts/export-openapi.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
