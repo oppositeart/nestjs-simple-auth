@@ -11,9 +11,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     networks:
-      - nestjs-course
+      - nestjs-simple-auth
 volumes:
   postgres_data:
 
 networks:
-  nestjs-course:
+  nestjs-simple-auth:
