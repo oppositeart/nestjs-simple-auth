@@ -15,6 +15,7 @@ export class PrismaService
     super({
       adapter,
       omit: {
+        // Prevent unintentional exposing user password
         user: { password: true },
       },
     });

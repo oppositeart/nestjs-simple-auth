@@ -72,6 +72,7 @@ export class AuthService {
 
       return this.auth(newUser.id, res);
     } catch (error) {
+      // Check if db returns that user is exist
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
@@ -90,12 +91,15 @@ export class AuthService {
       where: {
         email,
       },
+      // Make sure that we get necessary parameters from the user.
       select: {
         id: true,
         password: true,
       },
     });
 
+    // Replace user password with the dummy to simulate password verification if user not found.
+    // Prevents fast response in case that user exists but password is wrong.
     const isValidPassword = await verify(
       user?.password ?? DUMMY_PASSWORD_HASH,
       password,
@@ -143,11 +147,17 @@ export class AuthService {
   }
 
   async logout(res: Response): Promise<boolean> {
+    // Simple logout implementation by removing the refresh token. Session will be active until the access token expires.
     this.setCookie(res, '', 0);
 
     return true;
   }
 
+  /**
+   * Helper to validate access token by user id.
+   * @param id User ID
+   * @returns User object
+   */
   async validate(id: string) {
     const user = await this.prismaService.user.findUnique({
       where: {
@@ -162,6 +172,11 @@ export class AuthService {
     return user;
   }
 
+  /**
+   * Helper to generates access and refresh tokens. Write refresh token to cookie and returns access token.
+   * @param id User ID
+   * @param res Response object that will be send to client
+   */
   private auth(id: string, res: Response) {
     const { accessToken, refreshToken } = this.generateTokens(id);
 
@@ -170,6 +185,11 @@ export class AuthService {
     return { accessToken };
   }
 
+  /**
+   * Generates access and refresh tokens.
+   * @param id User id for JWT payload
+   * @returns Object with access and refresh tokens
+   */
   private generateTokens(id: string) {
     const payload: JwtPayload = { id };
 
@@ -188,6 +208,12 @@ export class AuthService {
     };
   }
 
+  /**
+   * Write data to the 'refreshToken' cookie.
+   * @param res Response object that will be send to client
+   * @param value Refresh token JWT
+   * @param maxAge Max age of this cookie
+   */
   private setCookie(res: Response, value: string, maxAge: number) {
     res.cookie('refreshToken', value, {
       httpOnly: true,

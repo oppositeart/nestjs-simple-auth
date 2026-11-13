@@ -19,6 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt-strategy') {
     });
   }
 
+  // Put returned object to the request's 'user' field.
   async validate(payload: JwtPayload) {
     return await this.authService.validate(payload.id);
   }

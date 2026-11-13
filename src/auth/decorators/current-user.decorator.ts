@@ -4,6 +4,9 @@ import { type Request } from 'express';
 
 type AuthUser = Omit<User, 'password'>;
 
+/**
+ * Use data from the current user as a param in controller.
+ */
 export const CurrentUser = createParamDecorator(
   (data: keyof AuthUser | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest() as Request;
