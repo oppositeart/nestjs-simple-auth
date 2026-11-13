@@ -18,6 +18,7 @@ It shows the common **access token + refresh token** pattern: a short-lived acce
 - Request validation with `class-validator` (unknown fields are stripped)
 - Password is never returned: it's omitted globally in the Prisma client
 - Interactive API docs with Swagger
+- Unit tests for the auth logic with Vitest; no database needed to run them
 
 ## Tech stack
 
@@ -245,7 +246,8 @@ src/
 │   ├── strategies/    # Passport JWT strategy
 │   ├── auth.controller.ts
 │   ├── auth.module.ts
-│   └── auth.service.ts
+│   ├── auth.service.ts
+│   └── auth.service.spec.ts  # Unit tests for AuthService
 ├── config/            # JWT and Swagger configuration
 ├── prisma/            # PrismaService (global module)
 ├── utils/
@@ -261,6 +263,27 @@ scripts/
 
 The Prisma client is generated into `src/generated/prisma` and is not committed.
 
+## Tests
+
+Unit tests are written with [Vitest](https://vitest.dev/) and the NestJS testing module. They live next to the code they test (`*.spec.ts`).
+
+```bash
+npm test
+```
+
+[`auth.service.spec.ts`](src/auth/auth.service.spec.ts) covers `AuthService`:
+
+| Flow     | What is checked                                                                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Register | Returns a valid access token, sets the refresh cookie, rejects an email that's already taken (`409`)                                                         |
+| Login    | Returns a valid access token, sets the refresh cookie, rejects a wrong password (`401`)                                                                      |
+| Refresh  | Issues a new access token for a valid refresh token; rejects a missing token or an access token used as a refresh token (`401`), and an unknown user (`404`) |
+| Logout   | Clears the refresh cookie and returns `true`                                                                                                                 |
+
+The tests also check that access tokens can't be verified with the refresh secret.
+
+The database is replaced with a mock of `PrismaService`, and JWTs are signed with test secrets, so the tests need neither PostgreSQL nor a `.env` file.
+
 ## Scripts
 
 | Command               | Description                                                     |
@@ -270,6 +293,9 @@ The Prisma client is generated into `src/generated/prisma` and is not committed.
 | `npm run start:prod`  | Run the compiled app                                            |
 | `npm run lint`        | Lint with oxlint                                                |
 | `npm run format`      | Format with Prettier                                            |
+| `npm test`            | Run the unit tests once                                         |
+| `npm run test:watch`  | Run the unit tests in watch mode                                |
+| `npm run test:cov`    | Run the unit tests with a coverage report in `coverage/`        |
 | `npm run docs:export` | Build the app and write the OpenAPI spec to `docs/openapi.json` |
 
 ## Limitations
