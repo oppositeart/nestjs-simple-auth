@@ -18,7 +18,7 @@ It shows the common **access token + refresh token** pattern: a short-lived acce
 - Request validation with `class-validator` (unknown fields are stripped)
 - Password is never returned: it's omitted globally in the Prisma client
 - Interactive API docs with Swagger
-- Unit tests for the auth logic with Vitest; no database needed to run them
+- Unit tests for the auth logic and e2e tests for every endpoint, with Vitest and Supertest
 
 ## Tech stack
 
@@ -123,6 +123,7 @@ The API runs on [http://localhost:3000](http://localhost:3000) (set `PORT` to ch
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`                  | Database credentials, also used by `docker-compose.yml`                            |
 | `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DATABASE` | Database location (Docker exposes Postgres on port `5433`)                         |
 | `POSTGRES_URI`                                        | Connection string, built from the variables above                                  |
+| `POSTGRES_TEST_DATABASE`, `POSTGRES_TEST_URI`         | Separate database for e2e tests; must differ from `POSTGRES_DATABASE`              |
 | `JWT_SECRET`                                          | Secret for signing access tokens                                                   |
 | `JWT_REFRESH_SECRET`                                  | Secret for signing refresh tokens; must differ from `JWT_SECRET`                   |
 | `JWT_ACCESS_TTL`                                      | Access token lifetime, e.g. `30m`                                                  |
@@ -259,13 +260,26 @@ docs/                  # GitHub Pages API docs (Redoc + openapi.json)
 postman/               # Postman collection
 scripts/
 └── export-openapi.js  # Writes docs/openapi.json
+test/
+├── auth.e2e-spec.ts   # E2E tests for the /auth endpoints
+├── global-setup.ts    # Creates the test database before e2e tests
+└── test-database.ts   # Reads POSTGRES_TEST_URI
 ```
 
 The Prisma client is generated into `src/generated/prisma` and is not committed.
 
 ## Tests
 
-Unit tests are written with [Vitest](https://vitest.dev/) and the NestJS testing module. They live next to the code they test (`*.spec.ts`).
+The project has two kinds of tests, both written with [Vitest](https://vitest.dev/) and the NestJS testing module:
+
+|           | Unit tests                            | E2E tests                               |
+| --------- | ------------------------------------- | --------------------------------------- |
+| Location  | Next to the code (`src/**/*.spec.ts`) | `test/*.e2e-spec.ts`                    |
+| What runs | `AuthService` on its own              | The whole app over HTTP, with Supertest |
+| Database  | Mocked                                | Separate PostgreSQL test database       |
+| Command   | `npm test`                            | `npm run test:e2e`                      |
+
+### Unit tests
 
 ```bash
 npm test
@@ -284,6 +298,36 @@ The tests also check that access tokens can't be verified with the refresh secre
 
 The database is replaced with a mock of `PrismaService`, and JWTs are signed with test secrets, so the tests need neither PostgreSQL nor a `.env` file.
 
+### E2E tests
+
+[`auth.e2e-spec.ts`](test/auth.e2e-spec.ts) starts the full application (`AppModule`, cookie parser and validation pipe) and sends real HTTP requests to it:
+
+| Endpoint              | What is checked                                                                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /auth/register` | Creates a user (`201`) with valid access and refresh tokens, rejects a taken email (`409`), and rejects invalid names, emails and passwords (`400`) |
+| `POST /auth/login`    | Returns valid tokens for correct credentials and rejects a wrong email or password (`401`)                                                          |
+| `POST /auth/refresh`  | Issues a new pair of valid tokens from the refresh cookie                                                                                           |
+| `POST /auth/logout`   | Returns `true` and expires the refresh cookie                                                                                                       |
+| `GET /auth/me`        | Returns the current user for a valid access token, without the password                                                                             |
+
+Each group also checks that the access token can't be verified with the refresh secret.
+
+E2E tests need a running PostgreSQL:
+
+```bash
+docker compose up -d
+```
+
+```bash
+npm run test:e2e
+```
+
+The tests delete all users before and after they run, so they use their own database from `POSTGRES_TEST_URI` (by default `nestjs-simple-auth-test` on the same server), never the development one:
+
+- Before the tests start, a global setup runs `prisma db push` on the test database. It creates the database if it doesn't exist and syncs its tables with the schema, so there's nothing to prepare by hand.
+- The e2e Vitest config sets `POSTGRES_URI` to the test database for the app under test.
+- The run stops with an error if `POSTGRES_TEST_URI` is missing or points to the same database as `POSTGRES_URI`.
+
 ## Scripts
 
 | Command               | Description                                                     |
@@ -296,6 +340,7 @@ The database is replaced with a mock of `PrismaService`, and JWTs are signed wit
 | `npm test`            | Run the unit tests once                                         |
 | `npm run test:watch`  | Run the unit tests in watch mode                                |
 | `npm run test:cov`    | Run the unit tests with a coverage report in `coverage/`        |
+| `npm run test:e2e`    | Run the e2e tests against the test database (needs PostgreSQL)  |
 | `npm run docs:export` | Build the app and write the OpenAPI spec to `docs/openapi.json` |
 
 ## Limitations

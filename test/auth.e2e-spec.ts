@@ -231,7 +231,7 @@ describe('AuthController (e2e)', () => {
         await request(app.getHttpServer())
           .post('/auth/login')
           .send({ ...loginUserData, email: 'invalid' + loginUserData.email })
-          .expect(HttpStatus.BAD_REQUEST);
+          .expect(HttpStatus.UNAUTHORIZED);
       });
 
       it('Should throw an error for the incorrect password', async () => {
@@ -241,7 +241,7 @@ describe('AuthController (e2e)', () => {
             ...loginUserData,
             password: 'invalid' + loginUserData.password,
           })
-          .expect(HttpStatus.BAD_REQUEST);
+          .expect(HttpStatus.UNAUTHORIZED);
       });
     });
 
